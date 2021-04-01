@@ -1,3 +1,6 @@
+# noinspection SqlIdentifierLengthForFile
+
+# noinspection SqlResolveForFile
 
 DROP DATABASE IF EXISTS cb_test;
 CREATE DATABASE cb_test;
@@ -44,13 +47,3 @@ INSERT INTO recipe_ingredients(quantity, unit, recipe_id, ingredient_id) VALUES
 (1, "cup(s)", 1, 2),
 (2, "cup(s)", 1, 3),
 (2, "slices", 4, 6);
-
-SELECT
-  recipes.name,
-  instructions,
-  CONCAT(quantity, " ", unit, " ", ingredients.name) AS ingredient
-FROM recipe_ingredients
-INNER JOIN recipes
-  ON recipe_ingredients.recipe_id = recipes.id
-INNER JOIN ingredients
-  ON recipe_ingredients.ingredient_id = ingredients.id;

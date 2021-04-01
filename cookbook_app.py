@@ -41,16 +41,6 @@ class CBController:
                 print("Please enter a valid command")
             return
 
-            # user_in = input("Waiting for input: ").lower()
-            # if user_in == "q":
-            #     print("Exiting")
-            #     return
-            # elif user_in in COMMANDS:
-            #     print(f"You chose {COMMANDS[user_in]}")
-            # else:
-            #     print("Please enter a valid command")
-            #     self._MyView.printCommands()
-
 
 class CBModel:
     def __init__(self, file_path):
@@ -71,11 +61,16 @@ class CBModel:
             print("*** Config file found. ***")
             return cfg
 
-    def formatQuery(self, *args):
-        self.query = "SELECT * FROM recipes"
+    def searchQuery(self, name=None, ingredients=None):
+        #search by recipe name, by ingredients
         pass
 
-    def execQuery(self):
+
+
+    def formatQuery(self, *args):
+        pass
+
+    def execQuery(self, data=None):
         self.cursor.execute(self.query)
         result = self.cursor.fetchall()
         for x in result:
@@ -98,7 +93,7 @@ class CBView:
     def printCommands():
         """Prints out command keys and their respective command"""
         for k, v in COMMANDS.items():
-            print(k + "\t\t\t" + v)
+            print(f"{k} \t \t {v}")
         print()
 
     def formatResults(self, sql_result):
@@ -114,5 +109,3 @@ class CBView:
 if __name__ == "__main__":
     myController = CBController("config.yaml")  # TODO: Add config file selection as first separate step
     myController._MyView.printWelcome()
-    myController.eventLoop()
-    myController.test()
