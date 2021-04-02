@@ -29,4 +29,4 @@ JOIN ingredients
     ON recipe_ingredients.ingredient_id = ingredients.id
 WHERE ingredients.name IN (ing1, ing2, ing3, ing4, ...)
 GROUP BY recipes.name
-HAVING COUNT(DISTINCT ingredients.name) = TOTAL_ING_NUMBER;
+HAVING COUNT(DISTINCT ingredients.name) = TOTAL_ING_NUMBER

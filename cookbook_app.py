@@ -11,27 +11,26 @@ class CBController:
         self._MyModel = CBModel(cfg_file_path)
         self._MyView = CBView()
 
-    def test(self):
-        """Test method for running and printing output of a simple SELECT * in the test db"""
-        self._MyModel.formatQuery()
-        self._MyModel.execQuery()
-
     def processInput(self):  # TODO: cleaning input, parsing for optionals, and passing to correct command
         raw_input = input("Waiting for input: ")
         result_list = raw_input.strip().lower().split()
 
         # Verification portion of the processing - raising exceptions here if errors
-        if result_list[0] not in COMMANDS:
+        if not result_list or result_list[0] not in COMMANDS:
             raise KeyError("Please enter a valid command.")
         else:
             command = COMMANDS[result_list[0]]
 
+        # TODO: Add checking for necessary search keywords
 
+        if command == COMMANDS["s"]:
+            self._MyModel.searchQuery(name="chicken parmesan") #TODO: Add input formatting to produce list
+        elif command == COMMANDS["q"]:
+            self._MyModel.safeClose()
 
-        #Analyzing list input for validity
+        # Analyzing list input for validity
 
-        #If correct, passing list input to correct command
-
+        # If correct, passing list input to correct command
 
     def eventLoop(self):
         while True:
@@ -39,7 +38,6 @@ class CBController:
                 self.processInput()
             except KeyError:
                 print("Please enter a valid command")
-            return
 
 
 class CBModel:
@@ -62,27 +60,66 @@ class CBModel:
             return cfg
 
     def searchQuery(self, name=None, ingredients=None):
-        #search by recipe name, by ingredients
-        pass
+        """formats search query for name of recipe or included ingredients and calls execQuery with query"""
+        if name:
 
+            self.query = """SELECT
+                              recipes.name,
+                              instructions,
+                              GROUP_CONCAT(quantity, " ", unit, " ", ingredients.name SEPARATOR ', ') AS ingredients
+                            FROM recipes
+                            LEFT JOIN recipe_ingredients
+                              ON recipes.id = recipe_ingredients.recipe_id
+                            LEFT JOIN ingredients
+                              ON recipe_ingredients.ingredient_id = ingredients.id
+                            WHERE recipes.name LIKE %s
+                            GROUP BY recipes.name"""
 
+            self.execQuery(data=(name,))
 
-    def formatQuery(self, *args):
-        pass
+        elif ingredients:
+
+            dynamic_query = ", ".join(["%s"] * len(ingredients))
+            dynamic_count = len(ingredients)
+
+            self.query = f"""SELECT
+                            recipes.name,
+                            recipes.instructions,
+                            GROUP_CONCAT(recipe_ingredients.quantity, " ",
+                                         recipe_ingredients.unit, " ",
+                                         ingredients.name SEPARATOR ", ")
+                            AS ingredients
+                            FROM recipes
+                            JOIN recipe_ingredients
+                                ON recipes.id = recipe_ingredients.recipe_id
+                            JOIN ingredients
+                                ON recipe_ingredients.ingredient_id = ingredients.id
+                            WHERE ingredients.name IN ({dynamic_query})
+                            GROUP BY recipes.name
+                            HAVING COUNT(DISTINCT ingredients.name) = {dynamic_count}"""
+
+            self.execQuery(data=ingredients)
+            #first is comma-separated sequence of ingredient names, 2nd is # of ingredients
+
+        #search by ingredients
 
     def execQuery(self, data=None):
-        self.cursor.execute(self.query)
-        result = self.cursor.fetchall()
-        for x in result:
-            print(x)
+        self.cursor.execute(self.query, data)
+        result = self.cursor.fetchall() # assigns list of results to result
+        for recipe, instr, ingr in result:
+            print(f"Recipe: {recipe} \nInstructions: {instr} \nIngredients: {ingr}")
+
+    def safeClose(self):
         self.cursor.close()
         self.cnx.close()
+        print("Closing cookbook.")
+        sys.exit()
 
 
 class CBView:
     def __init__(self):
-        self.sql_result = None # Raw response
-        self.formatted_out = None # Printing out just what needed
+        self.sql_result = None  # Raw response
+        self.formatted_out = None  # Printing out just what needed
 
     def printWelcome(self):
         """Prints out the program initial welcome message"""
@@ -107,5 +144,6 @@ class CBView:
 
 
 if __name__ == "__main__":
-    myController = CBController("config.yaml")  # TODO: Add config file selection as first separate step
-    myController._MyView.printWelcome()
+    myController = CBController("config.yaml")  # TODO: Add config file selection as first separate step (creation function)
+    myController._MyView.printWelcome() #TODO: Repackage this into myController
+    myController.eventLoop()
