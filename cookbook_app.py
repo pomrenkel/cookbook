@@ -3,13 +3,19 @@ import sys
 import yaml
 import mysql.connector
 
-COMMANDS = {"i": "INSERT", "q": "QUIT", "s": "SEARCH"}
+COMMANDS = {"i": "INSERT", "q": "QUIT", "s": "SEARCH", "h": "HELP"}
+COMMANDS_HELP = {"i": ["INSERT --- insert a new recipe"],
+                 "q": ["QUIT --- quit the program"],
+                 "s": ["SEARCH --- search for recipes", "-i --- search by ingredients", "-n --- search by name"],
+                 "h": ["HELP --- print all commands and options"]
+                 }
 
 
 class CBController:
     def __init__(self, cfg_file_path):
         self._MyModel = CBModel(cfg_file_path)
         self._MyView = CBView()
+        self._MyView.printWelcome()
 
     def processInput(self):  # TODO: cleaning input, parsing for optionals, and passing to correct command
         raw_input = input("Waiting for input: ")
@@ -21,12 +27,18 @@ class CBController:
         else:
             command = COMMANDS[result_list[0]]
 
-        # TODO: Add checking for necessary search keywords
-
         if command == COMMANDS["s"]:
-            self._MyModel.searchQuery(name="chicken parmesan") #TODO: Add input formatting to produce list
+            try:
+                if result_list[1] == "-i":
+                    self._MyModel.searchQuery(ingredients=result_list[2:])  # TODO: Add input formatting to produce list
+                elif result_list[1] == "-n":
+                    self._MyModel.searchQuery(name=result_list[2])
+            except IndexError:
+                print("Please enter a valid search option (-i or -n) --- see h  :  HELP for more information")
         elif command == COMMANDS["q"]:
             self._MyModel.safeClose()
+        elif command == COMMANDS["h"]:
+            self._MyView.printHelp()
 
         # Analyzing list input for validity
 
@@ -78,7 +90,7 @@ class CBModel:
             self.execQuery(data=(name,))
 
         elif ingredients:
-
+            # search by ingredients
             dynamic_query = ", ".join(["%s"] * len(ingredients))
             dynamic_count = len(ingredients)
 
@@ -99,15 +111,13 @@ class CBModel:
                             HAVING COUNT(DISTINCT ingredients.name) = {dynamic_count}"""
 
             self.execQuery(data=ingredients)
-            #first is comma-separated sequence of ingredient names, 2nd is # of ingredients
-
-        #search by ingredients
 
     def execQuery(self, data=None):
         self.cursor.execute(self.query, data)
-        result = self.cursor.fetchall() # assigns list of results to result
+        result = self.cursor.fetchall()  # assigns list of results to result
+        # TODO: Pass result list back to controller to handle
         for recipe, instr, ingr in result:
-            print(f"Recipe: {recipe} \nInstructions: {instr} \nIngredients: {ingr}")
+            print(f"\nRecipe: {recipe} \nInstructions: {instr} \nIngredients: {ingr}")
 
     def safeClose(self):
         self.cursor.close()
@@ -124,16 +134,16 @@ class CBView:
     def printWelcome(self):
         """Prints out the program initial welcome message"""
         print("\nWelcome to the cookbook!\n")
-        self.printCommands()
+        self.printHelp()
 
     @staticmethod
-    def printCommands():
-        """Prints out command keys and their respective command"""
-        for k, v in COMMANDS.items():
-            print(f"{k} \t \t {v}")
+    def printHelp():
+        print()
+        for k, v in COMMANDS_HELP.items():
+            print(f"{k} : " + "\n\t".join(v))
         print()
 
-    def formatResults(self, sql_result):
+    def formatResults(self, sql_result_list):
         """Formats raw SQL results and stores raw/formatted of most recent result"""
         pass
 
@@ -144,6 +154,6 @@ class CBView:
 
 
 if __name__ == "__main__":
-    myController = CBController("config.yaml")  # TODO: Add config file selection as first separate step (creation function)
-    myController._MyView.printWelcome() #TODO: Repackage this into myController
+    # TODO: Add config file selection as first separate step (creation function)
+    myController = CBController("config.yaml")
     myController.eventLoop()

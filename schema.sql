@@ -28,22 +28,35 @@ CREATE TABLE recipe_ingredients(
 
 
 INSERT INTO recipes(name, instructions) VALUES
-("Chicken Parmesan", "1) Bread the chicken. 2) Bake the chicken. 3) Top on pasta."),
-("Muffins", "1) Make the batter. 2) Bake in oven. 3) Enjoy!"),
-("Pizza", "1) Roll out your dough. 2) Top with cheese and toppings. 3) Bake at 350 for 40 minutes."),
-("Toast", "1) Put toast in toaster for a few minutes. 2) Spread preferred topping and enjoy.");
+("Chicken Parmesan", "1) Bread the chicken. 2) Bake the chicken. 3) Top on pasta."), #1
+("Pizza", "1) Roll out your dough. 2) Top with cheese and toppings. 3) Bake at 350 for 40 minutes."), #2
+("Toast", "1) Put toast in toaster for a few minutes. 2) Butter that bitch. 3) Cronch cronch."), #3
+("Blueberry Muffins", "1) Mix flour and eggs. 2) Add blueberries. 3) Bake in oven. 4) Let cool."); #4
 
 
 INSERT INTO ingredients(name) VALUES
-("chicken"),
-("breadcrumbs"),
-("marinara sauce"),
-("flour"),
-("blueberry"),
-("bread");
+("chicken"),  #1
+("breadcrumbs"), #2
+("marinara sauce"), #3
+("flour"), #4
+("blueberry"), #5
+("bread"), #6
+("eggs"), #7
+("shredded cheese"), #8
+("butter"), #9
+("pepperoni"); #10
 
 INSERT INTO recipe_ingredients(quantity, unit, recipe_id, ingredient_id) VALUES
 (3, "breasts", 1, 1),
 (1, "cup(s)", 1, 2),
 (2, "cup(s)", 1, 3),
-(2, "slices", 4, 6);
+(.5, "cup(s)", 1, 4),
+(1, "cup(s)", 2, 4),
+(1, "cup(s)", 2, 3),
+(2.5, "cup(s)", 2, 8),
+(1, "handful", 2, 10),
+(2, "slices", 3, 6),
+(1, "pat", 3, 9),
+(1.5, "cup(s)", 4, 4),
+(4, "whole", 4, 7),
+(.75, "cup(s)", 4, 5);
