@@ -17,7 +17,7 @@ class CBController:
         self._MyView = CBView()
         self._MyView.printWelcome()
 
-    def processInput(self):  # TODO: cleaning input, parsing for optionals, and passing to correct command
+    def processInput(self):  # TODO: Add detection of multi-word ingredients, clean up/tighten the parsing (regex?)
         raw_input = input("Waiting for input: ")
         result_list = raw_input.strip().lower().split()
 
@@ -30,7 +30,7 @@ class CBController:
         if command == COMMANDS["s"]:
             try:
                 if result_list[1] == "-i":
-                    self._MyModel.searchQuery(ingredients=result_list[2:])  # TODO: Add input formatting to produce list
+                    self._MyModel.searchQuery(ingredients=result_list[2:])
                 elif result_list[1] == "-n":
                     self._MyModel.searchQuery(name=result_list[2])
             except IndexError:
@@ -39,10 +39,6 @@ class CBController:
             self._MyModel.safeClose()
         elif command == COMMANDS["h"]:
             self._MyView.printHelp()
-
-        # Analyzing list input for validity
-
-        # If correct, passing list input to correct command
 
     def eventLoop(self):
         while True:
@@ -94,21 +90,28 @@ class CBModel:
             dynamic_query = ", ".join(["%s"] * len(ingredients))
             dynamic_count = len(ingredients)
 
-            self.query = f"""SELECT
-                            recipes.name,
-                            recipes.instructions,
-                            GROUP_CONCAT(recipe_ingredients.quantity, " ",
-                                         recipe_ingredients.unit, " ",
-                                         ingredients.name SEPARATOR ", ")
-                            AS ingredients
-                            FROM recipes
-                            JOIN recipe_ingredients
-                                ON recipes.id = recipe_ingredients.recipe_id
-                            JOIN ingredients
-                                ON recipe_ingredients.ingredient_id = ingredients.id
-                            WHERE ingredients.name IN ({dynamic_query})
-                            GROUP BY recipes.name
-                            HAVING COUNT(DISTINCT ingredients.name) = {dynamic_count}"""
+            self.query = f"""
+            SELECT   r.name,
+                     r.instructions,
+                     group_concat(r_ig.quantity, " ", r_ig.unit, " ", ig.name SEPARATOR ", ") AS ingredients
+            FROM     recipes r
+            JOIN     recipe_ingredients r_ig
+            ON       r.id = r_ig.recipe_id
+            JOIN     ingredients ig
+            ON       r_ig.ingredient_id = ig.id
+            WHERE    r.id IN
+                     (
+                              SELECT   r.id
+                              FROM     recipes r
+                              JOIN     recipe_ingredients r_ig
+                              ON       r.id = r_ig.recipe_id
+                              JOIN     ingredients ig
+                              ON       r_ig.ingredient_id = ig.id
+                              WHERE    ig.name IN ({dynamic_query})
+                              GROUP BY r.id
+                              HAVING   count(DISTINCT ig.name) = {dynamic_count} )
+            GROUP BY r.id
+            """
 
             self.execQuery(data=ingredients)
 
@@ -117,7 +120,7 @@ class CBModel:
         result = self.cursor.fetchall()  # assigns list of results to result
         # TODO: Pass result list back to controller to handle
         for recipe, instr, ingr in result:
-            print(f"\nRecipe: {recipe} \nInstructions: {instr} \nIngredients: {ingr}")
+            print(f"\nRecipe: {recipe} \nInstructions: {instr} \nIngredients: {ingr}\n")
 
     def safeClose(self):
         self.cursor.close()
