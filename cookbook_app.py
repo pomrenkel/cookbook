@@ -7,8 +7,7 @@ COMMANDS = {"i": "INSERT", "q": "QUIT", "s": "SEARCH", "h": "HELP"}
 COMMANDS_HELP = {"i": ["INSERT --- insert a new recipe"],
                  "q": ["QUIT --- quit the program"],
                  "s": ["SEARCH --- search for recipes", "-i --- search by ingredients", "-n --- search by name"],
-                 "h": ["HELP --- print all commands and options"]
-                 }
+                 "h": ["HELP --- print all commands and options"]}
 
 
 class CBController:
@@ -30,9 +29,11 @@ class CBController:
         if command == COMMANDS["s"]:
             try:
                 if result_list[1] == "-i":
-                    self._MyModel.searchQuery(ingredients=result_list[2:])
+                    result = self._MyModel.searchQuery(ingredients=result_list[2:])
+                    self._MyView.receiveResults(result)
                 elif result_list[1] == "-n":
-                    self._MyModel.searchQuery(name=result_list[2])
+                    result = self._MyModel.searchQuery(name=result_list[2])
+                    self._MyView.receiveResults(result)
             except IndexError:
                 print("Please enter a valid search option (-i or -n) --- see h  :  HELP for more information")
         elif command == COMMANDS["q"]:
@@ -70,7 +71,6 @@ class CBModel:
     def searchQuery(self, name=None, ingredients=None):
         """formats search query for name of recipe or included ingredients and calls execQuery with query"""
         if name:
-
             self.query = """SELECT
                               recipes.name,
                               instructions,
@@ -83,13 +83,12 @@ class CBModel:
                             WHERE recipes.name LIKE %s
                             GROUP BY recipes.name"""
 
-            self.execQuery(data=(name,))
+            query_result = self.execQuery(data=(name,))
 
         elif ingredients:
             # search by ingredients
             dynamic_query = ", ".join(["%s"] * len(ingredients))
             dynamic_count = len(ingredients)
-
             self.query = f"""
             SELECT   r.name,
                      r.instructions,
@@ -112,15 +111,13 @@ class CBModel:
                               HAVING   count(DISTINCT ig.name) = {dynamic_count} )
             GROUP BY r.id
             """
-
-            self.execQuery(data=ingredients)
+            query_result = self.execQuery(data=ingredients)
+        return query_result
 
     def execQuery(self, data=None):
         self.cursor.execute(self.query, data)
-        result = self.cursor.fetchall()  # assigns list of results to result
-        # TODO: Pass result list back to controller to handle
-        for recipe, instr, ingr in result:
-            print(f"\nRecipe: {recipe} \nInstructions: {instr} \nIngredients: {ingr}\n")
+        exec_result = self.cursor.fetchall()  # assigns list of results to result
+        return exec_result
 
     def safeClose(self):
         self.cursor.close()
@@ -133,6 +130,7 @@ class CBView:
     def __init__(self):
         self.sql_result = None  # Raw response
         self.formatted_out = None  # Printing out just what needed
+        self.result_index = 0
 
     def printWelcome(self):
         """Prints out the program initial welcome message"""
@@ -146,13 +144,24 @@ class CBView:
             print(f"{k} : " + "\n\t".join(v))
         print()
 
+    def receiveResults(self, sql_result_list):
+        # If - Checking/error raising # TODO: Add checking for weirdness/no results
+        self.sql_result = sql_result_list
+        self.formatResults(sql_result_list)
+        self.printResults()
+
     def formatResults(self, sql_result_list):
-        """Formats raw SQL results and stores raw/formatted of most recent result"""
-        pass
+        """Formats raw SQL results and stores formatted of most recent result"""
+        # TODO: Add formatting
+        self.formatted_out = sql_result_list
 
     def printResults(self):
         """Displays formatted SQL results to user"""
-        # printing out the formatted results as specified
+        for recipe, instr, ingr in self.formatted_out:
+            print(f"\nRecipe: {recipe} \nInstructions: {instr} \nIngredients: {ingr}\n")
+
+    def changePage(self, direction):
+        # Receive direction and adjust display pagination
         pass
 
 
