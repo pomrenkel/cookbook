@@ -1,4 +1,3 @@
-import os
 import sys
 import yaml
 import mysql.connector
@@ -10,13 +9,17 @@ COMMANDS_HELP = {"i": ["INSERT --- insert a new recipe"],
                  "h": ["HELP --- print all commands and options"]}
 
 
+def choose_config():
+    pass
+
+
 class CBController:
     def __init__(self, cfg_file_path):
         self._MyModel = CBModel(cfg_file_path)
         self._MyView = CBView()
-        self._MyView.printWelcome()
+        self._MyView.print_welcome()
 
-    def processInput(self):  # TODO: Add detection of multi-word ingredients, clean up/tighten the parsing (regex?)
+    def process_input(self):  # TODO: Add detection of multi-word ingredients, clean up/tighten the parsing (regex?)
         raw_input = input("Waiting for input: ")
         result_list = raw_input.strip().lower().split()
 
@@ -29,35 +32,35 @@ class CBController:
         if command == COMMANDS["s"]:
             try:
                 if result_list[1] == "-i":
-                    result = self._MyModel.searchQuery(ingredients=result_list[2:])
-                    self._MyView.receiveResults(result)
+                    result = self._MyModel.search_query(ingredients=result_list[2:])
+                    self._MyView.receive_results(result)
                 elif result_list[1] == "-n":
-                    result = self._MyModel.searchQuery(name=result_list[2])
-                    self._MyView.receiveResults(result)
+                    result = self._MyModel.search_query(name=result_list[2])
+                    self._MyView.receive_results(result)
             except IndexError:
                 print("Please enter a valid search option (-i or -n) --- see h  :  HELP for more information")
         elif command == COMMANDS["q"]:
-            self._MyModel.safeClose()
+            self._MyModel.safe_close()
         elif command == COMMANDS["h"]:
-            self._MyView.printHelp()
+            self._MyView.print_help()
 
-    def eventLoop(self):
+    def event_loop(self):
         while True:
             try:
-                self.processInput()
+                self.process_input()
             except KeyError:
                 print("Please enter a valid command")
 
 
 class CBModel:
     def __init__(self, file_path):
-        self.cfg = self.loadConfig(file_path)
+        self.cfg = self.load_config(file_path)
         self.cnx = mysql.connector.connect(**self.cfg['database'])
         self.cursor = self.cnx.cursor()
         self.query = ""
 
     @staticmethod
-    def loadConfig(file_path):
+    def load_config(file_path):
         """Returns config dict object from given filepath"""
         try:
             with open(file_path, "r") as cfg_file:
@@ -68,7 +71,7 @@ class CBModel:
             print("*** Config file found. ***")
             return cfg
 
-    def searchQuery(self, name=None, ingredients=None):
+    def search_query(self, name=None, ingredients=None):
         """formats search query for name of recipe or included ingredients and calls execQuery with query"""
         if name:
             self.query = """SELECT
@@ -83,7 +86,7 @@ class CBModel:
                             WHERE recipes.name LIKE %s
                             GROUP BY recipes.name"""
             param = f"%{name}%"
-            query_result = self.execQuery(data=(param,))
+            query_result = self.exec_query(data=(param,))
 
         elif ingredients:
             # search by ingredients
@@ -111,15 +114,15 @@ class CBModel:
                               HAVING   count(DISTINCT ig.name) = {dynamic_count} )
             GROUP BY r.id
             """
-            query_result = self.execQuery(data=ingredients)
+            query_result = self.exec_query(data=ingredients)
         return query_result
 
-    def execQuery(self, data=None):
+    def exec_query(self, data=None):
         self.cursor.execute(self.query, data)
         exec_result = self.cursor.fetchall()  # assigns list of results to result
         return exec_result
 
-    def safeClose(self):
+    def safe_close(self):
         self.cursor.close()
         self.cnx.close()
         print("Closing cookbook.")
@@ -132,30 +135,30 @@ class CBView:
         self.formatted_out = None  # Printing out just what needed
         self.result_index = 0
 
-    def printWelcome(self):
+    def print_welcome(self):
         """Prints out the program initial welcome message"""
         print("\nWelcome to the cookbook!\n")
-        self.printHelp()
+        self.print_help()
 
     @staticmethod
-    def printHelp():
+    def print_help():
         print()
         for k, v in COMMANDS_HELP.items():
             print(f"{k} : " + "\n\t".join(v))
         print()
 
-    def receiveResults(self, sql_result_list):
+    def receive_results(self, sql_result_list):
         # If - Checking/error raising
         self.sql_result = sql_result_list
-        self.formatResults(sql_result_list)
-        self.printResults()
+        self.format_results(sql_result_list)
+        self.print_results()
 
-    def formatResults(self, sql_result_list):
+    def format_results(self, sql_result_list):
         """Formats raw SQL results and stores formatted of most recent result"""
         # TODO: Add formatting
         self.formatted_out = sql_result_list
 
-    def printResults(self):
+    def print_results(self):
         """Displays formatted SQL results to user"""
         if not self.formatted_out:
             print("No matches found.")
@@ -163,7 +166,7 @@ class CBView:
             for recipe, instr, ingr in self.formatted_out:
                 print(f"\nRecipe: {recipe} \nInstructions: {instr} \nIngredients: {ingr}\n")
 
-    def changePage(self, direction):
+    def change_page(self, direction):
         # Receive direction and adjust display pagination
         pass
 
@@ -171,4 +174,4 @@ class CBView:
 if __name__ == "__main__":
     # TODO: Add config file selection as first separate step (creation function)
     myController = CBController("config.yaml")
-    myController.eventLoop()
+    myController.event_loop()
