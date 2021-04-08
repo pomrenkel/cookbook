@@ -82,8 +82,8 @@ class CBModel:
                               ON recipe_ingredients.ingredient_id = ingredients.id
                             WHERE recipes.name LIKE %s
                             GROUP BY recipes.name"""
-
-            query_result = self.execQuery(data=(name,))
+            param = f"%{name}%"
+            query_result = self.execQuery(data=(param,))
 
         elif ingredients:
             # search by ingredients
@@ -145,7 +145,7 @@ class CBView:
         print()
 
     def receiveResults(self, sql_result_list):
-        # If - Checking/error raising # TODO: Add checking for weirdness/no results
+        # If - Checking/error raising
         self.sql_result = sql_result_list
         self.formatResults(sql_result_list)
         self.printResults()
@@ -157,8 +157,11 @@ class CBView:
 
     def printResults(self):
         """Displays formatted SQL results to user"""
-        for recipe, instr, ingr in self.formatted_out:
-            print(f"\nRecipe: {recipe} \nInstructions: {instr} \nIngredients: {ingr}\n")
+        if not self.formatted_out:
+            print("No matches found.")
+        else:
+            for recipe, instr, ingr in self.formatted_out:
+                print(f"\nRecipe: {recipe} \nInstructions: {instr} \nIngredients: {ingr}\n")
 
     def changePage(self, direction):
         # Receive direction and adjust display pagination
