@@ -38,3 +38,8 @@ WHERE r.id IN (
         HAVING COUNT(DISTINCT ig.name) = ING_COUNT
         )
 GROUP BY r.id;
+
+# Check for existing recipe name
+SELECT
+    recipes.name
+FROM recipes WHERE recipes.name LIKE %s;

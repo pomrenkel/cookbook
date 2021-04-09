@@ -10,6 +10,8 @@ COMMANDS_HELP = {"i": ["INSERT --- insert a new recipe"],
 
 
 def choose_config():
+    #If not found, ask user for config file name
+    #If still not found, provide error message and request to move to current directory
     pass
 
 
@@ -37,12 +39,42 @@ class CBController:
                 elif result_list[1] == "-n":
                     result = self._MyModel.search_query(name=result_list[2])
                     self._MyView.receive_results(result)
+                else:
+                    print("Please choose one of the given search options (-i or -n) --- see h : HELP for more info")
             except IndexError:
                 print("Please enter a valid search option (-i or -n) --- see h  :  HELP for more information")
         elif command == COMMANDS["q"]:
             self._MyModel.safe_close()
         elif command == COMMANDS["h"]:
             self._MyView.print_help()
+        elif command == COMMANDS["i"]:
+            self.run_insert()
+
+    def run_insert(self):
+        recipe_name = input("Enter the name of your recipe: ").strip()
+
+        if self._MyModel.check_recipe_name(recipe_name): # Breaking early if recipe exists
+            print("Sorry - that recipe already exists!")
+            return
+
+        recipe_instructions = input("Please type or copy/paste the recipe instructions: ")
+
+        print("Please enter your ingredients 1-by-1 as follows: AMOUNT;UNIT;INGREDIENT NAME")
+        print("Example: 2;cup(s);breadcrumbs    OR    1.25;tablespoons;vanilla")
+        print("To end ingredient entry, simply enter 'X'")
+
+        ing_entry = ""
+        recipe_ingredients = []
+        while ing_entry != 'X':
+            ing_entry = input().upper().strip()
+            if ing_entry != 'X':
+                recipe_ingredients.append(tuple(ing_entry.split(sep=";")))
+
+        print("Is this recipe correct?")
+        print(recipe_name, recipe_instructions, *recipe_ingredients, sep='\n')
+
+        #Ask user for ingredients - check against DB for needed insertion
+        #Ask user for
 
     def event_loop(self):
         while True:
@@ -74,17 +106,19 @@ class CBModel:
     def search_query(self, name=None, ingredients=None):
         """formats search query for name of recipe or included ingredients and calls execQuery with query"""
         if name:
-            self.query = """SELECT
-                              recipes.name,
-                              instructions,
-                              GROUP_CONCAT(quantity, " ", unit, " ", ingredients.name SEPARATOR ', ') AS ingredients
-                            FROM recipes
-                            LEFT JOIN recipe_ingredients
-                              ON recipes.id = recipe_ingredients.recipe_id
-                            LEFT JOIN ingredients
-                              ON recipe_ingredients.ingredient_id = ingredients.id
-                            WHERE recipes.name LIKE %s
-                            GROUP BY recipes.name"""
+            self.query = """
+            SELECT
+            recipes.name,
+            instructions,
+            GROUP_CONCAT(quantity, " ", unit, " ", ingredients.name SEPARATOR ', ') AS ingredients
+            FROM recipes
+            LEFT JOIN recipe_ingredients
+                ON recipes.id = recipe_ingredients.recipe_id
+            LEFT JOIN ingredients
+                ON recipe_ingredients.ingredient_id = ingredients.id
+            WHERE recipes.name LIKE %s
+            GROUP BY recipes.name"""
+
             param = f"%{name}%"
             query_result = self.exec_query(data=(param,))
 
@@ -121,6 +155,18 @@ class CBModel:
         self.cursor.execute(self.query, data)
         exec_result = self.cursor.fetchall()  # assigns list of results to result
         return exec_result
+
+    def check_recipe_name(self, recipe_name):
+        """Checks for existence of a recipe by name w/in DB and returns true if found, false otherwise."""
+        self.query = f"""
+        SELECT 
+        recipes.name
+        FROM recipes WHERE recipes.name LIKE %s 
+        """
+        if self.exec_query(data=(recipe_name,)):
+            return True
+        else:
+            return False
 
     def safe_close(self):
         self.cursor.close()
